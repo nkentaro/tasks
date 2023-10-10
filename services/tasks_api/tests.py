@@ -1,4 +1,4 @@
-import pyetst
+import pytest
 from fastapi import status
 from starlette.testclient import TestClient
 
@@ -7,7 +7,7 @@ from main import app
 
 @pytest.fixture
 def client():
-    returnn TestClient(app)
+    return TestClient(app)
 
 def test_health_check(client):
     """
