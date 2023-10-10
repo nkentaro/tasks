@@ -9,6 +9,7 @@ from main import app
 def client():
     return TestClient(app)
 
+
 def test_health_check(client):
     """
     GIVEN
