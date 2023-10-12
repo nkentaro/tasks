@@ -30,6 +30,8 @@ jobs:
         run: poetry install --no-root
       - name: Run tests
         run: poetry run pytest tests.py --cov=./ --cov-report=xml
+        env:
+          AWS_DEFAULT_REGION: ap-northeast-1
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
