@@ -1,6 +1,6 @@
 import os
-import boto3
 
+import boto3
 
 client = boto3.client("dynamodb", endpoint_url=os.getenv("DYNAMODB_URL"))
 table_name = os.getenv("TABLE_NAME")
@@ -30,4 +30,3 @@ client.create_table(
         },
     ],
 )
-
