@@ -12,6 +12,7 @@ provider:
   logRetentionInDays: 30
   environment:
     APP_ENVIRONMENT: ${self:provider.stage}
+    TABLE_NAME: ${self:custom.tableName}
   iam:
     role:
       statements:

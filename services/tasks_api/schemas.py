@@ -24,3 +24,7 @@ class APITaskList(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class CloseTask(BaseModel):
+    id: UUID
