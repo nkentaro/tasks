@@ -1,4 +1,5 @@
 import uuid
+import jwt
 
 import boto3
 import pytest
@@ -6,14 +7,9 @@ from fastapi import status
 from moto import mock_dynamodb
 from starlette.testclient import TestClient
 
-from main import app
+from main import app, get_task_store
 from models import Task, TaskStatus
 from store import TaskStore
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
 
 
 def test_health_check(client):
@@ -61,6 +57,17 @@ def dynamodb_table():
         yield table_name
 
 
+@pytest.fixture
+def task_store(dynamodb_table):
+    return TaskStore(dynamodb_table)
+
+
+@pytest.fixture
+def client(task_store):
+    app.dependency_overrides[get_task_store] = lambda: task_store
+    return TestClient(app)
+
+
 def test_added_task_retrieved_by_id(dynamodb_table):
     repository = TaskStore(table_name=dynamodb_table)
     task = Task.create(uuid.uuid4(), "Clean your home", "ken@g3labs.net")
@@ -94,3 +101,52 @@ def test_closed_tasks_listed(dynamodb_table):
     repository.add(closed_task)
 
     assert repository.list_closed(owner=closed_task.owner) == [closed_task]
+
+
+@pytest.fixture
+def user_email():
+    return "ken@g3labs.net"
+
+
+@pytest.fixture
+def id_token(user_email):
+    return jwt.encode({"cognito:username": user_email}, "secret")
+
+
+def test_create_task(client, user_email, id_token):
+    title = "Clean your desk"
+    response = client.post(
+        "/api/create-task",
+        json={
+            "title": title
+        },
+        headers={
+            "Authorization": id_token
+        }
+    )
+    body = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert body["id"]
+    assert body["title"] == title
+    assert body["status"] == "OPEN"
+    assert body["owner"] == user_email
+
+
+def test_list_open_tasks(client, user_email, id_token):
+    title = "Kiss your wife"
+    client.post(
+        "/api/create-task", json={"title": title}, headers={"Authorization": id_token}
+    )
+
+    response = client.get(
+        "/api/open-tasks",
+        headers={"Authorization": id_token}
+    )
+    body = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert body["results"][0]["id"]
+    assert body["results"][0]["title"] == title
+    assert body["results"][0]["owner"] == user_email
+    assert body["results"][0]["status"] == TaskStatus.OPEN
